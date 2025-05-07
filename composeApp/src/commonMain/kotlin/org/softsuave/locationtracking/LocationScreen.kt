@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LocationScreen(viewModel: LocationViewModel) {
     val locationInfo by viewModel.locationInfo.collectAsState()
+    val distance by viewModel.distance.collectAsState()
 
     Column(
         modifier = Modifier
@@ -39,6 +41,35 @@ fun LocationScreen(viewModel: LocationViewModel) {
 
         Button(onClick = { viewModel.startTracking() }) {
             Text("Start Tracking")
+        }
+
+
+        RadiusSelector(viewModel, distance)
+
+    }
+}
+
+
+@Composable
+fun RadiusSelector(viewModel: LocationViewModel, distance: Int) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Select circle radius to track")
+
+        // Slider range: 50 to 200 meters
+        Slider(
+            value = distance.toFloat(),
+            onValueChange = { viewModel.setDistance(it.toInt()) },
+            valueRange = 50f..200f,
+            steps = 15, // Optional: for fixed intervals
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+
+        Text(text = "$distance meters")
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = { viewModel.setDistance(100) }) {
+            Text("Reset to 100m")
         }
     }
 }

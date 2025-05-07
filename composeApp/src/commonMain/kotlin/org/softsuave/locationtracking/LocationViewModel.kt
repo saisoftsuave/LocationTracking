@@ -1,5 +1,6 @@
 package org.softsuave.locationtracking
 
+import androidx.compose.runtime.MutableIntState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.jordond.compass.Priority
@@ -11,6 +12,7 @@ import dev.jordond.compass.geolocation.mobile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -18,7 +20,10 @@ class LocationViewModel() : ViewModel() {
     private val geolocator: Geolocator = Geolocator.mobile()
 
     private val _locationInfo = MutableStateFlow("Press the button to get location")
-    val locationInfo: StateFlow<String> = _locationInfo
+    val locationInfo: StateFlow<String> = _locationInfo.asStateFlow()
+
+    private val _distance = MutableStateFlow<Int>(100)
+    val distance: StateFlow<Int> = _distance.asStateFlow()
 
     val trackingStatus = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
 
@@ -71,5 +76,9 @@ class LocationViewModel() : ViewModel() {
                 )
             )
         }
+    }
+
+    fun setDistance(distance: Int) {
+        _distance.value = distance
     }
 }
