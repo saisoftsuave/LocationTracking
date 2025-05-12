@@ -1,6 +1,6 @@
 package org.softsuave.locationtracking
 
-import androidx.compose.runtime.MutableIntState
+import androidx.compose.material.DrawerDefaults.shape
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.jordond.compass.Priority
@@ -9,23 +9,34 @@ import dev.jordond.compass.geolocation.GeolocatorResult
 import dev.jordond.compass.geolocation.LocationRequest
 import dev.jordond.compass.geolocation.TrackingStatus
 import dev.jordond.compass.geolocation.mobile
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LocationViewModel() : ViewModel() {
     private val geolocator: Geolocator = Geolocator.mobile()
-
+    private val initalGeocode: Geocode = Geocode(0.0, 0.0, "")
+    private var geoFenceThreshold: Double = 0.0
+    private var geoFenceManager: GeoFenceManager =
+        GeoFenceManager(GeoFenceShape.Circle(initalGeocode, geoFenceThreshold))
     private val _locationInfo = MutableStateFlow("Press the button to get location")
-    val locationInfo: StateFlow<String> = _locationInfo.asStateFlow()
+    val locationInfo: StateFlow<String> = _locationInfo
 
-    private val _distance = MutableStateFlow<Int>(100)
-    val distance: StateFlow<Int> = _distance.asStateFlow()
+    private val _distanceInfo = MutableStateFlow("Press the button to get location")
+    val distanceInfo: StateFlow<String> = _distanceInfo
 
-    val trackingStatus = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
+    private val _geoFenceInfo = MutableStateFlow("IDLE")
+    val geoFenceInfo: StateFlow<String> = _geoFenceInfo
+
+    private val _sliderValue = MutableStateFlow(0)
+    val sliderValue: StateFlow<Int> = _sliderValue
+
+    private val _geoFenceRunning = MutableStateFlow(false)
+    val geoFenceRunning: StateFlow<Boolean> = _geoFenceRunning
+
+    private val trackingStatus = MutableStateFlow<TrackingStatus>(TrackingStatus.Idle)
 
     init {
         viewModelScope.launch {
@@ -37,6 +48,10 @@ class LocationViewModel() : ViewModel() {
                     is TrackingStatus.Idle -> _locationInfo.value = "Tracking stopped"
                     is TrackingStatus.Update -> {
                         val location = status.location.coordinates
+                        setInitialGeocodeAndUpdateDistance(location.latitude, location.longitude)
+                        if (geoFenceRunning.value) {
+                            checkGeoFence(Geocode(location.latitude, location.longitude, ""))
+                        }
                         _locationInfo.value =
                             "Latitude: ${location.latitude}, Longitude: ${location.longitude}"
                     }
@@ -50,6 +65,7 @@ class LocationViewModel() : ViewModel() {
             when (val result = geolocator.current()) {
                 is GeolocatorResult.Success -> {
                     val location = result.data.coordinates
+//                    setInitialGeocodeAndUpdateDistance(location.latitude, location.longitude)
                     _locationInfo.value =
                         "Latitude: ${location.latitude}, Longitude: ${location.longitude}"
                 }
@@ -67,6 +83,17 @@ class LocationViewModel() : ViewModel() {
         }
     }
 
+    private fun setInitialGeocodeAndUpdateDistance(lat: Double, long: Double) {
+        if (initalGeocode.lat == 0.0 && initalGeocode.long == 0.0) {
+            initalGeocode.lat = lat
+            initalGeocode.long = long
+        } else {
+            _distanceInfo.update {
+                "Distance: ${distanceBetween(initalGeocode, Geocode(lat, long, ""))} meters"
+            }
+        }
+    }
+
     fun startTracking() {
         viewModelScope.launch {
             geolocator.startTracking(
@@ -78,7 +105,45 @@ class LocationViewModel() : ViewModel() {
         }
     }
 
-    fun setDistance(distance: Int) {
-        _distance.value = distance
+    fun stopTracking() {
+        viewModelScope.launch {
+            geolocator.stopTracking()
+        }
     }
+
+    fun startGeoFence(
+        shapeEnum: GeoFenceShapeEnum,
+        thresholdMeters: Double = 10.0
+    ) {
+        val shape = when (shapeEnum) {
+            GeoFenceShapeEnum.CIRCLE -> GeoFenceShape.Circle(initalGeocode, thresholdMeters)
+            GeoFenceShapeEnum.SQUARE -> GeoFenceShape.Square(initalGeocode, thresholdMeters)
+            GeoFenceShapeEnum.RECTANGLE -> GeoFenceShape.Rectangle(null, null)
+        }
+        geoFenceManager = GeoFenceManager(shape, thresholdMeters)
+        _geoFenceRunning.value = true
+    }
+private var showStatus = "IDLE"
+    private fun checkGeoFence(current: Geocode) {
+        viewModelScope.launch {
+            val currentStatus = geoFenceManager.check(current)
+            if(currentStatus == GeoFenceEnums.ENTER){
+                showStatus = currentStatus.toString()
+            }
+            if (currentStatus == GeoFenceEnums.EXIT){
+                showStatus = currentStatus.toString()
+            }
+            _geoFenceInfo.update { showStatus }
+        }
+    }
+
+    fun stopGeoFence() {
+        _geoFenceRunning.value = false
+    }
+
+    fun setGeoFenceThreshold(value: Float) {
+        geoFenceThreshold = value.toDouble()
+    }
+
+
 }
