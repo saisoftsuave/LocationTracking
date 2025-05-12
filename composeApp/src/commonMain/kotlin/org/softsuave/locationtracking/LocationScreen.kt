@@ -11,8 +11,11 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +32,14 @@ fun LocationScreen(viewModel: LocationViewModel) {
     val thresholdDistance by remember {
         mutableStateOf(0)
     }
+    val distance by viewModel.distance.collectAsState()
+    val notificationId by remember { mutableStateOf(10) }
+
+
+    LaunchedEffect(locationInfo) {
+        sendLocalNotification(notificationId, locationInfo)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()

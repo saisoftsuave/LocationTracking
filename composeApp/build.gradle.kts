@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+//    id("com.google.gms.google-services")
 }
 
 kotlin {
@@ -23,6 +24,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
+            export("io.github.mirzemehdi:kmpnotifier:1.5.1")
             baseName = "ComposeApp"
             isStatic = true
         }
@@ -51,6 +53,7 @@ kotlin {
             // Geolocation
             implementation(libs.compass.geolocation)
             implementation(libs.compass.geolocation.mobile)
+            api("io.github.mirzemehdi:kmpnotifier:1.5.1")
         }
     }
 }
